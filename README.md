@@ -8,4 +8,4 @@
     - you just need to add gitlab variable section
     - run in local erver (because i was add github in my local)
 4. also add one dev-ops folder that contain jenkinsfile of one of them (just for i using it)
-
+5. add two node and react app code (for reference)
