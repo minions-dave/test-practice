@@ -1,0 +1,27 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  # Define your environment-specific variables here
+  SSH_USER: your-ssh-user
+  SSH_SERVER: your-ssh-server
+  SSH_PRIVATE_KEY: $YOUR_SSH_PRIVATE_KEY
+  NODE_ENV: production
+
+build:
+  stage: build
+  script:
+    - npm install
+    - npm run build
+
+deploy:
+  stage: deploy
+  script:
+    - apt-get update
+    - apt-get install -y sshpass
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - sshpass -e ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_SERVER 'cd /path/to/your/reactjs/app && git pull'
+  only:
+    - master

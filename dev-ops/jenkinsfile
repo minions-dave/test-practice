@@ -1,0 +1,78 @@
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(name: 'InitPipeline', defaultValue: false, description: 'Check this to initialize pipeline without actually runing it')
+        string(name: 'Checkout', defaultValue: 'main', description: 'Branch/Commit/Tag')
+        booleanParam(name: 'IsTag', defaultValue: false, description: 'Select if you want to checkout a tag')
+    }
+
+    stages {
+        stage('Init') {
+            when {
+                equals expected: true, actual: params.InitPipeline
+            }
+            steps {
+                echo 'Initializezd Pipeline Parameters'
+            }
+        }
+        stage('Git Clone') {
+            when {
+                equals expected: false, actual: params.InitPipeline
+            }
+            steps {
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[
+                        name : "refs/${params.IsTag == true ? 'tags': 'heads' }/${params.Checkout}"
+                    ]],
+                    userRemoteConfigs: [[
+                        url: 'git@github.com:minions-dave/test-practice.git',
+                        credentialsId: 'pooja'
+                    ]],
+                    doGenerateSubmoduleConfigurations: false,
+                    extensions: [[
+                        $class: 'SubmoduleOption',
+                        disableSubmodules: false,
+                        parentCredentials: true,
+                        recursiveSubmodules: true,
+                        reference: '',
+                        trackingSubmodules: false
+                    ]],
+                    submoduleCfg: []
+                ])
+            }
+        }
+        stage('Build') {
+            when {
+                equals expected: false, actual: params.InitPipeline
+            }
+            steps {
+                sh 'npm i'
+                sh 'npm run build'
+                sh 'rm -rf /home/ubuntu/Documents/project/test-practice'
+            }
+        }
+        stage('Deploy') {
+            when {
+                equals expected: false, actual: params.InitPipeline
+            }
+            steps {
+                sh 'cp -r dist /home/ubuntu/Documents/project/test-practice'
+                sh 'cd /home/ubuntu/Documents/project/test-practice/ && mv .env-test-practice .env'
+                sh 'cd /home/ubuntu/Documents/project/test-practice/ && npm i'
+                sh 'pm2 delete test-practice || true'
+                sh 'cd /home/ubuntu/Documents/project/test-practice/ && pm2 start src/server.js --name test-practice -f'
+                sh 'pm2 save'
+            }
+        }
+        stage('workspace wipeout') {
+            when {
+                equals expected: false, actual: params.InitPipeline
+            }
+            steps {
+                deleteDir()
+            }
+        }
+    }
+}
